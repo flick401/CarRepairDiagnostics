@@ -1,10 +1,14 @@
 package com.ubiquisoft.evaluation.domain;
 
+import com.ubiquisoft.evaluation.PartTypeCountingCollector;
+
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.function.*;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
@@ -16,25 +20,44 @@ public class Car {
 
 	private List<Part> parts;
 
+	/*
+	 * Return map of the part types missing.
+	 *
+	 * Each car requires one of each of the following types:
+	 *      ENGINE, ELECTRICAL, FUEL_FILTER, OIL_FILTER
+	 * and four of the type: TIRE
+	 *
+	 * Example: a car only missing three of the four tires should return a map like this:
+	 *
+	 *      {
+	 *          "TIRE": 3
+	 *      }
+	 */
 	public Map<PartType, Integer> getMissingPartsMap() {
-		/*
-		 * Return map of the part types missing.
-		 *
-		 * Each car requires one of each of the following types:
-		 *      ENGINE, ELECTRICAL, FUEL_FILTER, OIL_FILTER
-		 * and four of the type: TIRE
-		 *
-		 * Example: a car only missing three of the four tires should return a map like this:
-		 *
-		 *      {
-		 *          "TIRE": 3
-		 *      }
-		 */
+		Map<PartType, Integer> map = getParts().stream().map(Part::getType).collect(new PartTypeCountingCollector());
+		Map<PartType, Integer> missingParts = new HashMap<>();
 
-		return null;
+		Arrays.asList(PartType.ENGINE, PartType.ELECTRICAL, PartType.FUEL_FILTER, PartType.OIL_FILTER)
+				.forEach(partType -> addIfMissing(map, missingParts, partType));
+
+		Integer tiresCount = map.get(PartType.TIRE);
+		if (tiresCount == null) {
+			missingParts.put(PartType.TIRE, 0);
+		} else if (tiresCount < 4) {
+		    //TODO check negative case
+			missingParts.put(PartType.TIRE, 4 - tiresCount);
+		}
+
+		return missingParts;
 	}
 
-	@Override
+    private void addIfMissing(Map<PartType, Integer> map, Map<PartType, Integer> missingParts, PartType partType) {
+        if (!map.containsKey(partType)) {
+            missingParts.put(partType, 1);
+        }
+    }
+
+    @Override
 	public String toString() {
 		return "Car{" +
 				       "year='" + year + '\'' +
